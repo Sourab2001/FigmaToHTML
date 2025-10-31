@@ -1,74 +1,84 @@
-
-import React, { useState, useEffect, useRef } from "react";
-import Navbar from "./Components/Navbar";
-import Banner from "./Components/Banner";
-import Properties from "./Components/Properties";
-import LeadCRM from "./Components/LeadCRM";
-import HowItWorks from "./Components/HowItWorks";
-import Testimonials from "./Components/Testimonials";
-import SalesSolutions from "./Components/SalesSolutions";
-import Footer from "./Components/Footer";
-import Management from "./Components/Management";
-import SupportedLeadCRM from "./Components/SupportedLeadCRM";
-import Floating from "./Components/Floating";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import CardsSection from "./Components/CardsSection";
+import FeedbackForm from "./Components/FeedbackForm";
 
 const App = () => {
-  const [showFloating, setShowFloating] = useState(false);
-  const footerRef = useRef(null);
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showCards, setShowCards] = useState(true);
+  const [showFeedback, setShowFeedback] = useState(false);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 200) {
-        setShowFloating(true);
-      } else {
-        setShowFloating(false);
+useEffect(() => {
+  let isMounted = true;
+  const timer = setTimeout(() => {
+    if (isMounted) setLoading(false);
+  }, 2000); 
+
+  axios
+    .get("https://jsonplaceholder.typicode.com/posts")
+    .then((response) => {
+      if (isMounted) {
+        setPosts(response.data || []);
       }
-    };
+    })
+    .catch((error) => {
+      console.error("Error fetching posts:", error);
+      if (isMounted) setPosts([]);
+    });
 
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  return () => {
+    isMounted = false;
+    clearTimeout(timer);
+  };
+}, []);
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setShowFloating(false); 
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
 
-    if (footerRef.current) {
-      observer.observe(footerRef.current);
-    }
-
-    return () => {
-      if (footerRef.current) {
-        observer.unobserve(footerRef.current);
-      }
-    };
-  }, []);
+  const removeCardById = (id) => {
+    setPosts((prev) => prev.filter((p) => p.id !== id));
+  };
 
   return (
-    <div>
-      <Navbar />
-      <Banner />
-      <Properties />
-      <LeadCRM />
-      <HowItWorks />
-      <Testimonials />
-      <SalesSolutions/>
-      <SupportedLeadCRM />
-      <Management />
+    <div className="app">
+      <header className="header">
+        <div className="title">Cards</div>
+        <div className="controls">
+          <button
+            className="btn toggle"
+            onClick={() => setShowCards((s) => !s)}
+            aria-pressed={showCards}
+          >
+            <span className="icon">¥</span>
+            <div className="label">View toggle</div>
+          </button>
 
-      {showFloating && <Floating />}
+          <button
+            className="btn feedback"
+            onClick={() => setShowFeedback(true)}
+          >
+            <div className="label">Have Feedback</div>
+            <div className="sub">We are Listening!</div>
+          </button>
+        </div>
+      </header>
 
-      <div ref={footerRef}>
-        <Footer />
-      </div>
+      <main className="main">
+        {loading ? (
+          <div className="loading">Loading...</div>
+        ) : showCards ? (
+          <CardsSection posts={posts} onRemove={removeCardById} />
+        ) : (
+          <div className="hidden-msg">Cards are hidden. Toggle to view.</div>
+        )}
+      </main>
+
+      {showFeedback && (
+        <FeedbackForm onclose={() => setShowFeedback(false)} />
+      )}
+
+      <footer className="footer">
+        <div>Cards - task</div>
+      </footer>
     </div>
   );
 };
